@@ -7,4 +7,4 @@ app = create_app()
 
 # 启动Flask Web服务
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=80)

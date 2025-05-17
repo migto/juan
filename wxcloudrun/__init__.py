@@ -1,5 +1,5 @@
 from flask import Flask
-from config import Config
+# from config import Config
 
 def create_app():
     """
@@ -7,7 +7,7 @@ def create_app():
     :return: Flask应用实例
     """
     app = Flask(__name__)
-    app.config.from_object(Config)
+    # app.config.from_object(Config)
 
     # 注册蓝图
     from wxcloudrun.views import bp
