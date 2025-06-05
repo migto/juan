@@ -1,0 +1,359 @@
+# 微信云托管 Python Flask 后台API服务开发规则
+
+## 项目架构与目录结构
+
+### 标准项目结构
+```
+.
+├── Dockerfile                   # Docker容器构建文件
+├── README.md                    # 项目说明文档
+├── container.config.json        # 云托管服务配置（模板部署初始化配置）
+├── requirements.txt             # Python依赖包管理文件
+├── config.py                    # 项目总配置文件（数据库、Web应用、日志等配置）
+├── run.py                       # Flask项目管理文件，命令行工具集入口
+├── .dockerignore               # Docker构建忽略文件
+├── .gitignore                  # Git版本控制忽略文件
+└── wxcloudrun/                 # 主应用目录
+    ├── __init__.py             # Python模块初始化文件
+    ├── dao.py                  # 数据库访问层模块
+    ├── model.py                # 数据库模型定义
+    ├── response.py             # API响应结构构造
+    ├── views.py                # 路由和业务逻辑处理主模块
+    └── templates/              # 模板目录（如需HTML页面）
+        └── index.html          # 主页模板
+```
+
+## 代码开发规范
+
+### Flask应用初始化
+- 使用工厂模式创建Flask应用实例
+- 在`wxcloudrun/__init__.py`中配置应用工厂函数
+- 统一配置CORS、日志、数据库连接等中间件
+
+### 路由设计规范
+- API路由统一使用`/api/`前缀
+- 使用RESTful风格设计API接口
+- 路由函数放置在`views.py`中，保持逻辑清晰
+- 示例路由结构：
+  ```python
+  # GET /api/count - 获取数据
+  # POST /api/count - 创建/更新数据
+  # PUT /api/count - 更新数据
+  # DELETE /api/count - 删除数据
+  ```
+
+### 数据库操作规范
+- 数据库模型统一定义在`model.py`中
+- 数据库访问逻辑封装在`dao.py`中
+- 使用ORM进行数据库操作，避免直接SQL拼接
+- 必须支持MySQL数据库（微信云托管标配）
+
+### API响应格式
+- 统一使用JSON格式响应
+- 标准响应结构：
+  ```json
+  {
+    "code": 0,          // 状态码：0-成功，非0-失败
+    "data": {},         // 响应数据
+    "message": "成功"    // 响应消息（可选）
+  }
+  ```
+- 响应构造函数定义在`response.py`中
+
+### 错误处理
+- 实现全局异常处理器
+- 对数据库连接异常、参数验证异常等进行统一处理
+- 返回友好的错误信息和HTTP状态码
+
+## 环境配置与部署
+
+### 必需的环境变量
+在云托管服务设置中必须配置以下环境变量：
+```bash
+MYSQL_ADDRESS=数据库地址        # 必填
+MYSQL_USERNAME=数据库用户名      # 必填
+MYSQL_PASSWORD=数据库密码        # 必填
+MYSQL_DATABASE=数据库名称        # 推荐配置
+```
+
+### Dockerfile最佳实践
+```dockerfile
+# 使用官方Python基础镜像
+FROM python:3.8-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 优化构建速度：先复制依赖文件
+COPY requirements.txt .
+
+# 安装Python依赖
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
+# 复制应用代码
+COPY . .
+
+# 暴露端口（确保与云托管服务设置中的端口一致）
+EXPOSE 80
+
+# 生产环境启动命令：使用WSGI服务器
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "4", "--timeout", "120", "run:app"]
+```
+
+### Flask生产环境部署要求
+
+#### 禁止使用开发服务器
+- **严禁在生产环境使用Flask开发服务器**（`flask run` 或 `app.run()`）
+- 开发服务器仅适用于开发和调试，不具备生产环境所需的性能和安全特性
+- 开发服务器单线程、性能低下，无法处理并发请求
+
+#### 必须使用WSGI服务器
+推荐使用以下WSGI服务器之一：
+
+**1. Gunicorn（推荐）**
+```dockerfile
+# Dockerfile启动命令
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "4", "--timeout", "120", "run:app"]
+```
+
+```python
+# run.py 生产环境配置
+from wxcloudrun import create_app
+import os
+
+app = create_app()
+
+if __name__ == '__main__':
+    # 仅在本地开发时使用
+    if os.environ.get('FLASK_ENV') == 'development':
+        app.run(host='0.0.0.0', port=80, debug=True)
+    else:
+        # 生产环境提示
+        print("生产环境请使用WSGI服务器启动，如: gunicorn run:app")
+```
+
+**2. uWSGI**
+```dockerfile
+# 使用uWSGI的Dockerfile启动命令
+CMD ["uwsgi", "--http", "0.0.0.0:80", "--module", "run:app", "--processes", "4", "--threads", "2"]
+```
+
+**3. Waitress（跨平台）**
+```dockerfile
+# 使用Waitress的启动命令
+CMD ["waitress-serve", "--host=0.0.0.0", "--port=80", "--threads=8", "run:app"]
+```
+
+#### WSGI服务器配置参数
+- **workers/processes**: 工作进程数，建议设置为 CPU核心数 × 2 + 1
+- **threads**: 每个进程的线程数，根据应用特性调整
+- **timeout**: 请求超时时间，默认30秒，可根据业务需求调整
+- **max-requests**: 进程处理请求数上限，防止内存泄漏
+- **preload**: 预加载应用，提高性能
+
+#### 生产环境配置示例
+```python
+# config.py - 生产环境配置
+import os
+
+class ProductionConfig:
+    """生产环境配置"""
+    DEBUG = False
+    TESTING = False
+    
+    # 数据库配置
+    MYSQL_ADDRESS = os.environ.get('MYSQL_ADDRESS')
+    MYSQL_USERNAME = os.environ.get('MYSQL_USERNAME') 
+    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD')
+    MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE', 'flask_app')
+    
+    # 安全配置
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'production-secret-key'
+    
+    # 日志配置
+    LOG_LEVEL = 'INFO'
+    
+    # WSGI服务器相关配置
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB文件上传限制
+```
+
+### requirements.txt管理
+- 使用固定版本号，避免依赖冲突
+- **必须包含WSGI服务器**，用于生产环境部署
+- 包含微信云托管常用库：
+  ```txt
+  Flask==2.0.3
+  PyMySQL==1.0.2
+  SQLAlchemy==1.4.23
+  Flask-SQLAlchemy==2.5.1
+  Flask-CORS==3.0.10
+  
+  # WSGI服务器（必选其一）
+  gunicorn==20.1.0          # 推荐：Linux/Unix环境
+  # uwsgi==2.0.21           # 可选：高性能替代方案
+  # waitress==2.1.2         # 可选：跨平台兼容
+  
+  # 其他常用依赖
+  python-dotenv==0.19.2     # 环境变量管理
+  marshmallow==3.14.1       # 数据序列化
+  redis==4.1.4              # Redis缓存（可选）
+  ```
+
+### container.config.json配置
+```json
+{
+  "containerPort": 80,
+  "minNum": 0,
+  "maxNum": 10,
+  "cpu": 0.25,
+  "mem": 0.5,
+  "envParams": {},
+  "customLogs": "stdout",
+  "dataBaseName": "flask_demo",
+  "executeSQLs": [
+    "CREATE TABLE IF NOT EXISTS Counters(id INT PRIMARY KEY AUTO_INCREMENT, count INT NOT NULL DEFAULT 1, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+  ]
+}
+```
+
+## 微信生态集成
+
+### 微信登录与鉴权
+- 支持小程序、公众号H5的微信登录
+- 利用云托管免鉴权特性，简化微信API调用
+- 从请求头获取微信用户信息：
+  ```python
+  # 从请求头获取微信OpenID
+  openid = request.headers.get('X-WX-OPENID')
+  unionid = request.headers.get('X-WX-UNIONID')
+  ```
+
+### 云调用能力
+- 无需access_token即可调用微信开放接口
+- 支持小程序订阅消息、模板消息等功能
+- 集成微信支付能力
+
+### 消息推送处理
+- 支持小程序、公众号消息推送接收
+- 实现自动消息回复机制
+- 免加解密处理推送消息
+
+## 性能与安全
+
+### 性能优化
+- 使用连接池管理数据库连接
+- 实现适当的缓存策略
+- 优化SQL查询，避免N+1问题
+- 使用异步处理耗时操作
+
+### 安全规范
+- 参数验证：所有输入参数必须验证
+- SQL注入防护：使用参数化查询
+- XSS防护：对输出内容进行转义
+- 限流保护：实现API请求频率限制
+- 日志记录：记录关键操作和异常信息
+
+### 日志管理
+```python
+import logging
+from datetime import datetime
+
+# 配置日志格式
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+```
+
+## 本地开发与调试
+
+### 本地环境搭建
+1. 使用Docker进行本地开发调试
+2. 配置本地环境变量文件`.env`
+3. 使用微信开发者工具进行联调
+
+### 调试最佳实践
+- 启用Flask的调试模式进行本地开发
+- 使用微信云托管本地调试工具
+- 实现健康检查接口：`/health`
+
+### 测试规范
+- 编写单元测试覆盖核心业务逻辑
+- 实现API接口测试
+- 使用mock测试微信API调用
+
+## 部署与监控
+
+### 部署注意事项
+- **确保使用WSGI服务器启动**，禁止使用Flask开发服务器
+- 确保端口配置与服务设置一致
+- 验证环境变量配置完整性
+- 检查数据库连接和初始化脚本
+- 关闭DEBUG模式，设置适当的日志级别
+- 配置合适的WSGI服务器进程数和线程数
+
+### 监控指标
+- API响应时间和成功率
+- 数据库连接状态
+- 内存和CPU使用情况
+- 异常日志监控
+
+### 故障排查
+- 检查服务日志定位问题
+- 验证数据库连接配置
+- 确认依赖包版本兼容性
+- 检查Docker构建过程
+
+## 代码质量要求
+
+### 代码风格
+- 遵循PEP 8 Python编码规范
+- 使用类型注解提高代码可读性
+- 编写清晰的注释和文档字符串
+- 保持函数和类的单一职责
+
+### 版本控制
+- 使用语义化版本号
+- 编写清晰的提交信息
+- 建立合理的分支策略
+- 配置适当的`.gitignore`文件
+
+## 扩展功能
+
+### 第三方服务集成
+- 腾讯云COS对象存储
+- 腾讯云Redis缓存
+- 腾讯云CDN加速
+- 其他腾讯云服务
+
+### 高级特性
+- WebSocket实时通信
+- 定时任务处理
+- 文件上传下载
+- 图片处理和缩放
+
+## 常见问题解决
+
+### 部署失败处理
+1. 检查Dockerfile语法和依赖安装
+2. 验证端口配置是否正确
+3. 确认环境变量设置完整
+4. 查看构建和运行日志
+
+### 数据库连接问题
+1. 验证数据库配置信息
+2. 检查网络连接状态
+3. 确认数据库权限设置
+4. 测试连接池配置
+
+### 性能问题优化
+1. 分析慢查询日志
+2. 优化数据库索引
+3. 实现合适的缓存策略
+4. 调整容器资源配置
+
+---
+
+*注意：严格按照以上规则进行开发，确保项目能够顺利部署到微信云托管平台并稳定运行。* 
