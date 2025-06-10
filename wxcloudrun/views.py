@@ -58,7 +58,12 @@ def preview_pdf():
     :return: PDF文件流
     """
     try:
-        n = int(request.args.get('n', 99))
+        n_str = request.args.get('n', '99')
+        if not n_str.isdigit():
+            return make_err_response('参数 n 必须为正整数', code=400)
+        n = int(n_str)
+        if n < 1 or n > 99:
+            return make_err_response('参数 n 必须在1到99之间', code=400)
         questions = generate_addition_questions(n)
         pdf_buffer = create_pdf(questions)
         return send_file(
@@ -77,7 +82,12 @@ def download_pdf():
     :return: PDF文件流
     """
     try:
-        n = int(request.args.get('n', 99))
+        n_str = request.args.get('n', '99')
+        if not n_str.isdigit():
+            return make_err_response('参数 n 必须为正整数', code=400)
+        n = int(n_str)
+        if n < 1 or n > 99:
+            return make_err_response('参数 n 必须在1到99之间', code=400)
         questions = generate_addition_questions(n)
         pdf_buffer = create_pdf(questions)
         return send_file(
