@@ -85,7 +85,7 @@ def create_pdf(questions):
 
 def parse_params():
     count_level = request.args.get('count_level', '1')
-    difficulty = request.args.get('difficulty', '3')
+    difficulty = request.args.get('difficulty', '2')
     if not count_level.isdigit() or int(count_level) not in COUNT_LEVEL_MAP:
         return None, None, make_err_response('参数 count_level 必须为1、2或3', code=400)
     if not difficulty.isdigit() or int(difficulty) not in DIFFICULTY_MAP:

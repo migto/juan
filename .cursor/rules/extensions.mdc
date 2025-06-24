@@ -1,5 +1,18 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 第三方服务集成
+
+- 腾讯云COS对象存储
+- 腾讯云Redis缓存
+- 腾讯云CDN加速
+- 其他腾讯云服务
+
+# 规则: 高级特性
+
+- WebSocket实时通信
+- 定时任务处理
+- 文件上传下载
+- 图片处理和缩放

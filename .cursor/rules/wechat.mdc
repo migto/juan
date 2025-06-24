@@ -1,5 +1,27 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 微信登录与鉴权
+
+- 支持小程序、公众号H5的微信登录
+- 利用云托管免鉴权特性，简化微信API调用
+- 从请求头获取微信用户信息：
+
+```python
+openid = request.headers.get('X-WX-OPENID')
+unionid = request.headers.get('X-WX-UNIONID')
+```
+
+# 规则: 云调用能力
+
+- 无需access_token即可调用微信开放接口
+- 支持小程序订阅消息、模板消息等功能
+- 集成微信支付能力
+
+# 规则: 消息推送处理
+
+- 支持小程序、公众号消息推送接收
+- 实现自动消息回复机制
+- 免加解密处理推送消息

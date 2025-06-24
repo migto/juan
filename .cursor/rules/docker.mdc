@@ -1,5 +1,40 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 环境配置与部署
+
+- 必须配置如下环境变量：
+
+```bash
+MYSQL_ADDRESS=数据库地址
+MYSQL_USERNAME=数据库用户名
+MYSQL_PASSWORD=数据库密码
+MYSQL_DATABASE=数据库名称
+```
+
+# 规则: Dockerfile最佳实践
+
+- 使用官方Python基础镜像
+- 优化构建速度，先复制依赖文件
+- 安装Python依赖时使用国内源
+- 生产环境必须使用WSGI服务器
+
+# 示例
+
+```dockerfile
+FROM python:3.8-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
+COPY . .
+EXPOSE 80
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "4", "--timeout", "120", "run:app"]
+```
+
+# 规则: WSGI服务器
+
+- 禁止在生产环境使用Flask开发服务器
+- 推荐使用Gunicorn、uWSGI或Waitress
+- 配置合适的进程数、线程数和超时时间

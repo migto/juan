@@ -1,5 +1,21 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 本地开发与调试
+
+- 使用Docker进行本地开发调试
+- 配置本地环境变量文件`.env`
+- 使用微信开发者工具进行联调
+
+# 规则: 调试与健康检查
+
+- 启用Flask的调试模式进行本地开发
+- 实现健康检查接口：`/health`
+
+# 规则: 测试规范
+
+- 编写单元测试覆盖核心业务逻辑
+- 实现API接口测试
+- 使用mock测试微信API调用

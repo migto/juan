@@ -1,5 +1,28 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 安全规范
+
+- 参数验证：所有输入参数必须验证
+- SQL注入防护：使用参数化查询
+- XSS防护：对输出内容进行转义
+- 限流保护：实现API请求频率限制
+- 日志记录：记录关键操作和异常信息
+
+# 规则: 日志管理
+
+- 统一日志格式，记录时间、级别、模块、信息
+
+# 示例
+
+```python
+import logging
+from datetime import datetime
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
+```

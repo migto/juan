@@ -1,5 +1,42 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: 项目架构与目录结构
+
+- 必须采用如下目录结构：
+
+```
+.
+├── Dockerfile
+├── README.md
+├── container.config.json
+├── requirements.txt
+├── config.py
+├── run.py
+├── .dockerignore
+├── .gitignore
+└── wxcloudrun/
+    ├── __init__.py
+    ├── dao.py
+    ├── model.py
+    ├── response.py
+    ├── views.py
+    └── templates/
+        └── index.html
+```
+
+# 规则: 代码质量与风格
+
+- 遵循PEP 8 Python编码规范
+- 使用类型注解提高代码可读性
+- 编写清晰的注释和文档字符串
+- 保持函数和类的单一职责
+
+# 规则: 版本控制
+
+- 使用语义化版本号
+- 编写清晰的提交信息
+- 建立合理的分支策略
+- 配置适当的`.gitignore`文件

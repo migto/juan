@@ -1,5 +1,52 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# 规则: Flask应用初始化
+
+- 必须使用工厂模式创建Flask应用实例
+- 在`wxcloudrun/__init__.py`中配置应用工厂函数
+- 统一配置CORS、日志、数据库连接等中间件
+
+# 规则: 路由设计
+
+- API路由统一使用`/api/`前缀
+- 使用RESTful风格设计API接口
+- 路由函数放置在`views.py`中
+
+# 示例
+
+```python
+# GET /api/count - 获取数据
+# POST /api/count - 创建/更新数据
+# PUT /api/count - 更新数据
+# DELETE /api/count - 删除数据
+```
+
+# 规则: 数据库操作
+
+- 数据库模型统一定义在`model.py`中
+- 数据库访问逻辑封装在`dao.py`中
+- 使用ORM进行数据库操作，避免直接SQL拼接
+- 必须支持MySQL数据库
+
+# 规则: API响应格式
+
+- 统一使用JSON格式响应
+- 标准响应结构：
+
+```json
+{
+  "code": 0,
+  "data": {},
+  "message": "成功"
+}
+```
+- 响应构造函数定义在`response.py`中
+
+# 规则: 错误处理
+
+- 实现全局异常处理器
+- 对数据库连接异常、参数验证异常等进行统一处理
+- 返回友好的错误信息和HTTP状态码
